@@ -190,11 +190,13 @@
   // Drift beside the quality chart for the long and world benchmarks
   function driftChart(id, rows, y, yt, fd) {
     var ref = rows.filter(function (r) { return r.ref; })[0], uni = rows.filter(function (r) { return !r.ours; }), pts = [];
+    var lowOurs = Math.min.apply(null, rows.filter(function (r) { return r.ours; }).map(function (r) { return r.drift; }));
     rows.forEach(function (r) {
       if (r.k < 1.4 || r.drift > y[1]) return;
       var p = { x: r.k, y: r.drift, kind: r.ours || "base", tip: [r.m, fx(r.k, 2) + " steps per token", fx(r.fps, fd) + " fps", "Drift " + fx(r.drift, 3)] };
       p.label = r.ours === "h" ? "Ours (learned)" : r.ours === "tf" ? "Ours (training-free)" : r.m;
-      if (r.ours === "h") { p.dy = 24; } else if (r.ours === "tf") { p.dy = -16; } else { p.dy = 22; }
+      // of the two ours points, the lower one is labelled below and the higher one above
+      if (r.ours) { p.dy = r.drift === lowOurs ? 24 : -16; } else { p.dy = 22; }
       pts.push(p);
     });
     chart(id, { h: 230, x: [1.4, 4.2], xt: [1.5, 2, 2.5, 3, 3.5, 4], y: y, yt: yt, yd: 1, ref: ref.drift,
