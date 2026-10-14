@@ -1,50 +1,279 @@
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Speculative Forcing for Efficient Autoregressive Video Generation</title>
-    <meta name="description" content="Speculative Forcing for Efficient Autoregressive Video Generation.">
-
-    <!-- Open Graph -->
-    <meta property="og:type" content="website">
-    <meta property="og:url" content="https://speculative-forcing.github.io/">
-    <meta property="og:title" content="Speculative Forcing for Efficient Autoregressive Video Generation">
-    <meta name="twitter:card" content="summary_large_image">
-    <meta name="twitter:title" content="Speculative Forcing for Efficient Autoregressive Video Generation">
-
-    <!-- Fonts -->
-    <link rel="stylesheet"
-        href="https://cdn.jsdelivr.net/gh/wanteddev/wanted-sans@v1.0.1/packages/wanted-sans/fonts/webfonts/variable/split/WantedSansVariable.min.css">
-
-    <link rel="stylesheet" href="style.css">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Speculative Forcing for Efficient Autoregressive Video Generation</title>
+<meta name="description" content="Speculative Forcing treats intermediate estimates as drafts and lets each token stop denoising once it has converged, for faster few-step autoregressive video generation.">
+<meta property="og:title" content="Speculative Forcing for Efficient Autoregressive Video Generation">
+<meta property="og:description" content="Speculative Forcing treats intermediate estimates as drafts and lets each token stop denoising once it has converged, for faster few-step autoregressive video generation.">
+<meta property="og:image" content="static/images/teaser_poster.jpg">
+<meta property="og:type" content="website">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/wanteddev/wanted-sans@v1.0.1/packages/wanted-sans/fonts/webfonts/variable/split/WantedSansVariable.min.css">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap">
+<link rel="stylesheet" href="style.css">
 </head>
-
 <body>
+<nav class="sidebar" aria-label="Sections">
+  <a href="#tldr" class="sidebar-item"><div class="sidebar-dot"></div><span class="sidebar-label">TL;DR</span></a>
+  <a href="#short" class="sidebar-item"><div class="sidebar-dot"></div><span class="sidebar-label">Short video</span></a>
+  <a href="#long" class="sidebar-item"><div class="sidebar-dot"></div><span class="sidebar-label">Long video</span></a>
+  <a href="#world" class="sidebar-item"><div class="sidebar-dot"></div><span class="sidebar-label">World generation</span></a>
+  <a href="#method" class="sidebar-item"><div class="sidebar-dot"></div><span class="sidebar-label">Method</span></a>
+  <a href="#ablation" class="sidebar-item"><div class="sidebar-dot"></div><span class="sidebar-label">Ablation</span></a>
+  <a href="#tables" class="sidebar-item"><div class="sidebar-dot"></div><span class="sidebar-label">Tables</span></a>
+  <a href="#abstract" class="sidebar-item"><div class="sidebar-dot"></div><span class="sidebar-label">Abstract</span></a>
+  <a href="#citation" class="sidebar-item"><div class="sidebar-dot"></div><span class="sidebar-label">Citation</span></a>
+</nav>
 
-    <section id="title" class="hero-section">
-        <div class="hero-container">
-            <h1 class="hero-title">
-                <span class="gradient-text">Speculative Forcing</span><br>
-                <span class="hero-subtitle">for Efficient Autoregressive<br> Video Generation</span>
-            </h1>
+<!-- ======================= Hero ======================= -->
+<section id="tldr" class="hero">
+  <div class="hero-inner">
+    <div class="hero-logos">
+      <img class="kaist" src="static/images/kaist_ai.png" alt="KAIST AI, Graduate School of AI" width="887" height="249">
+      <img src="static/images/naver_ai_lab.png" alt="NAVER AI Lab" width="1630" height="500">
+    </div>
+    <h1 class="hero-title">
+      <span class="nm"><svg class="mark" id="mark" viewBox="0 0 72 72" aria-hidden="true"></svg><span class="grad-text">Speculative Forcing</span></span>
+      <span class="sub">for Efficient Autoregressive Video Generation</span>
+    </h1>
 
-            <!-- Authors -->
-            <div class="hero-authors">
-                <span><a href="https://eenrue.github.io/" target="_blank" rel="noopener noreferrer">Hyunwook Choi</a><sup>1,2</sup></span>
-                <span><a href="https://cvlab.kaist.ac.kr/" target="_blank" rel="noopener noreferrer">Seungryong Kim</a><sup>1</sup></span>
-                <span><a href="https://dongyoonhan.github.io/" target="_blank" rel="noopener noreferrer">Dongyoon Han</a><sup>2</sup></span>
-                <span><a href="https://sangdooyun.github.io/" target="_blank" rel="noopener noreferrer">Sangdoo Yun</a><sup>2</sup></span>
-            </div>
+    <div class="hero-authors">
+      <span><a href="https://eenrue.github.io/" target="_blank" rel="noopener noreferrer">Hyunwook Choi</a><sup>1*</sup></span>
+      <span><a href="https://cvlab.kaist.ac.kr" target="_blank" rel="noopener noreferrer">Seungryong Kim</a><sup>1</sup></span>
+      <span><a href="https://dongyoonhan.github.io/" target="_blank" rel="noopener noreferrer">Dongyoon Han</a><sup>&dagger;,2</sup></span>
+      <span><a href="https://sangdooyun.github.io/" target="_blank" rel="noopener noreferrer">Sangdoo Yun</a><sup>&dagger;,2</sup></span>
+    </div>
+    <div class="hero-aff">
+      <span><sup>1</sup>KAIST AI</span>
+      <span><sup>2</sup>NAVER AI Lab</span>
+    </div>
+    <div class="hero-notes">
+      <span><sup>*</sup>Work done during internship at NAVER AI Lab.</span>
+      <span><sup>&dagger;</sup>Corresponding author</span>
+    </div>
+    <div class="hero-venue">arXiv preprint</div>
 
-            <div class="hero-affiliations">
-                <span><sup>1</sup>KAIST AI</span>
-                <span><sup>2</sup>NAVER AI Lab</span>
-            </div>
+    <!-- TODO: set the paper link. Remove the "soon" class once it is live. -->
+    <div class="hero-buttons">
+      <a href="#" class="btn soon" id="link-paper" aria-disabled="true">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 2h9l5 5v13a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2zm8 1.5V8h4.5L14 3.5zM7.5 12v1.5h9V12h-9zm0 3.5V17h9v-1.5h-9zm0-7V10H12V8.5H7.5z"/></svg>
+        Paper (coming soon)
+      </a>
+      <a href="https://github.com/naver-ai/speculative-forcing" class="btn outline" id="link-code" target="_blank" rel="noopener noreferrer">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2a10 10 0 0 0-3.16 19.49c.5.09.68-.22.68-.48v-1.7c-2.78.6-3.37-1.34-3.37-1.34-.46-1.16-1.11-1.47-1.11-1.47-.91-.62.07-.61.07-.61 1 .07 1.53 1.03 1.53 1.03.9 1.52 2.34 1.08 2.91.83.09-.65.35-1.09.63-1.34-2.22-.25-4.56-1.11-4.56-4.94 0-1.09.39-1.98 1.03-2.68-.1-.25-.45-1.27.1-2.64 0 0 .84-.27 2.75 1.02a9.5 9.5 0 0 1 5 0c1.91-1.29 2.75-1.02 2.75-1.02.55 1.37.2 2.39.1 2.64.64.7 1.03 1.59 1.03 2.68 0 3.84-2.34 4.68-4.57 4.93.36.31.68.92.68 1.85v2.74c0 .27.18.58.69.48A10 10 0 0 0 12 2z"/></svg>
+        Code
+      </a>
+    </div>
+  </div>
+
+  <div class="wide">
+    <div class="reel" id="reel">
+      <video id="reel-video" src="static/videos/teaser.mp4" poster="static/images/teaser_poster.jpg" autoplay loop muted playsinline preload="metadata"
+        aria-label="Speculative Forcing overview video: the method, then short video, long video and world generation results"></video>
+      <div class="reel-bar">
+        <button class="reel-btn" id="reel-play" type="button" aria-label="Pause">
+          <svg id="reel-ico" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><rect x="6" y="5" width="4" height="14" rx="1"/><rect x="14" y="5" width="4" height="14" rx="1"/></svg>
+        </button>
+        <div class="reel-seek" id="reel-seek" role="slider" tabindex="0" aria-label="Seek" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
+          <div class="reel-track"><div class="reel-fill" id="reel-fill"></div></div>
         </div>
-    </section>
+        <span class="reel-time" id="reel-time">0:00</span>
+      </div>
+    </div>
+    <span class="video-caption">All videos on this page are generated. Brighter regions in the maps run more denoising steps.</span>
 
+    <div class="tldr">
+      <span class="tldr-label">TL;DR</span>
+      <p class="tldr-text">
+        Does every token need to be denoised until the final step?
+        <b>Speculative Forcing treats intermediate estimates as drafts, accepts the tokens that have already converged, and keeps denoising only the rest.</b>
+        It keeps four-step quality with about 1.7 steps per token on LongLive and runs over 1.5&times; faster.
+      </p>
+    </div>
+  </div>
+</section>
+
+<!-- ======================= Results ======================= -->
+<section id="short" class="section">
+  <div class="container">
+    <div class="eyebrow">Results</div>
+    <h2 class="section-title">Short video generation</h2>
+    <p class="lead">On 5-second videos with LongLive, both verifiers keep the VBench total of the four-step generator while using fewer than 1.7 denoising steps per token on average.</p>
+    <div class="result">
+      <div class="chart-card">
+        <h3 class="chart-title">VBench total score against mean denoising steps</h3>
+        <div class="legend"><span><i class="k-base"></i>Uniform sampling</span><span><i class="k-h"></i>Ours, learned verifier</span><span><i class="k-tf"></i>Ours, training-free</span><span><i class="k-ref"></i>4-step level</span></div>
+        <div class="chart" id="chart-short"></div>
+        <p class="chart-note">The score axis starts at 82. The 1-step score of 79.06 is below the plotted range.</p>
+      </div>
+      <div class="stats">
+        <div class="stat"><span class="stat-num ours">1.58&times;</span><span class="stat-lab">faster than four-step sampling<br><b>26.4 &rarr; 41.7 fps</b> on one H100</span></div>
+        <div class="stat"><span class="stat-num ours">1.68</span><span class="stat-lab">denoising steps per token on average, out of 4</span></div>
+        <div class="stat"><span class="stat-num">+0.13</span><span class="stat-lab">VBench total<br><b>83.08 &rarr; 83.21</b></span></div>
+      </div>
+    </div>
+
+    <div class="gallery" id="gallery-short"></div>
+  </div>
+</section>
+
+<section id="long" class="section">
+  <div class="container">
+    <div class="eyebrow">Results</div>
+    <h2 class="section-title">Long video generation</h2>
+    <p class="lead">On 30-second videos, the learned verifier keeps the quality and consistency of the four-step generator at about 1.7 steps per token. Drift, the variation of imaging quality over the rollout, is also lower than with four-step sampling.</p>
+    <div class="result">
+      <div class="chart-card">
+        <h3 class="chart-title">VBench-Long total score against mean denoising steps</h3>
+        <div class="legend"><span><i class="k-base"></i>Uniform sampling</span><span><i class="k-h"></i>Ours, learned verifier</span><span><i class="k-tf"></i>Ours, training-free</span><span><i class="k-ref"></i>4-step level</span></div>
+        <div class="chart" id="chart-long"></div>
+        <p class="chart-note">The score axis starts at 82.2. The 1-step score of 80.82 is below the plotted range.</p>
+        <h3 class="chart-title chart-title-2">Drift against mean denoising steps, lower is better</h3>
+        <div class="chart" id="chart-long-drift"></div>
+        <p class="chart-note">The 1-step Drift of 2.930 is above the plotted range.</p>
+      </div>
+      <div class="stats">
+        <div class="stat"><span class="stat-num ours">1.54&times;</span><span class="stat-lab">faster than four-step sampling<br><b>24.5 &rarr; 37.8 fps</b> on one H100</span></div>
+        <div class="stat"><span class="stat-num ours">1.72</span><span class="stat-lab">denoising steps per token on average, out of 4</span></div>
+        <div class="stat"><span class="stat-num">+0.12</span><span class="stat-lab">VBench-Long total<br><b>82.69 &rarr; 82.81</b></span></div>
+        <div class="stat"><span class="stat-num">1.707</span><span class="stat-lab">Drift, lower is better<br><b>1.722</b> with four-step sampling</span></div>
+      </div>
+    </div>
+
+    <div class="gallery" id="gallery-long"></div>
+  </div>
+</section>
+
+<section id="world" class="section">
+  <div class="container">
+    <div class="eyebrow">Results</div>
+    <h2 class="section-title">World generation</h2>
+    <p class="lead">On Lingbot-World 2.0, camera control keeps revealing new content, so more tokens need the full schedule. Speculative Forcing still keeps the quality of the four-step generator with about 2.5 steps per token, with lower Drift and comparable camera-pose error.</p>
+    <div class="result">
+      <div class="chart-card">
+        <h3 class="chart-title">VBench quality score against mean denoising steps</h3>
+        <div class="legend"><span><i class="k-base"></i>Uniform sampling</span><span><i class="k-h"></i>Ours, learned verifier</span><span><i class="k-tf"></i>Ours, training-free</span><span><i class="k-ref"></i>4-step level</span></div>
+        <div class="chart" id="chart-world"></div>
+        <p class="chart-note">The score axis starts at 81.5. The 1-step score of 77.19 is below the plotted range.</p>
+        <h3 class="chart-title chart-title-2">Drift against mean denoising steps, lower is better</h3>
+        <div class="chart" id="chart-world-drift"></div>
+        <p class="chart-note">The 1-step Drift of 5.579 is above the plotted range.</p>
+      </div>
+      <div class="stats">
+        <div class="stat"><span class="stat-num ours">1.35&times;</span><span class="stat-lab">faster than four-step sampling<br><b>18.1 &rarr; 24.5 fps</b> on one H100</span></div>
+        <div class="stat"><span class="stat-num ours">2.55</span><span class="stat-lab">denoising steps per token on average, out of 4</span></div>
+        <div class="stat"><span class="stat-num">+0.03</span><span class="stat-lab">VBench quality<br><b>82.62 &rarr; 82.65</b></span></div>
+        <div class="stat"><span class="stat-num">2.839</span><span class="stat-lab">Drift, lower is better<br><b>3.094</b> with four-step sampling</span></div>
+      </div>
+    </div>
+
+    <div class="gallery" id="gallery-world"></div>
+  </div>
+</section>
+
+<!-- ======================= Method ======================= -->
+<section id="method" class="section">
+  <div class="container">
+    <div class="eyebrow">Method</div>
+    <h2 class="section-title">Denoise, verify, commit</h2>
+    <p class="lead">Few-step autoregressive generators run every token through the full denoising schedule. Many tokens already match their full-step output after the first steps, while others keep changing until the end. Speculative Forcing lets each token stop at its own step, without changing the generator&rsquo;s weights.</p>
+    <ul class="points">
+      <li><h3>Draft</h3>Each denoising step already predicts a clean estimate for every token. We treat this intermediate estimate as a draft of the token&rsquo;s final output.</li>
+      <li><h3>Verify</h3>A verifier predicts how far each draft is from the full-step output. We study a training-free verifier and a learned one, a small 3D convolutional head on the frozen generator&rsquo;s features.</li>
+      <li><h3>Commit</h3>Accepted tokens are fixed as final outputs and skip the remaining steps. Their cached keys and values stay available, so the rejected tokens keep refining with the full context.</li>
+    </ul>
+    <div class="method-video">
+      <video src="static/videos/method.mp4" poster="static/images/method_poster.jpg" controls muted playsinline preload="metadata" loop autoplay
+        aria-label="Animated overview of the method: the baseline, then draft, verify and commit on a token grid, ending with a real sample"></video>
+    </div>
+
+    <figure class="figure fig-gap">
+      <img src="static/images/convergence.jpg" alt="Latent differences between each k-step prediction and the four-step output for a video generation sample and a world model sample" width="1723" height="535">
+    </figure>
+    <figcaption><b>Token-wise convergence during denoising.</b> Differences between each chunk&rsquo;s <i>k</i>-step prediction and the four-step output. Background and regions similar to history converge early, while newly revealed regions need further denoising.</figcaption>
+  </div>
+</section>
+
+<!-- ======================= Ablation ======================= -->
+<section id="ablation" class="section">
+  <div class="container">
+    <div class="eyebrow">Analysis</div>
+    <h2 class="section-title">Ablation study</h2>
+    <p class="lead">All ablations use the world generation benchmark on Lingbot-World 2.0, where intermediate distortions are most pronounced.</p>
+
+    <figure class="figure">
+      <img src="static/images/ablation.jpg" alt="Qualitative ablation comparing four-step sampling, our learned verifier, our training-free verifier, chunk-wise acceptance and temporal difference under three camera actions, with artifacts marked by red boxes" width="1720" height="878">
+    </figure>
+    <figcaption><b>Verification signal and commitment granularity.</b> The learned verifier handles distortions that challenge training-free verification. Chunk-wise acceptance commits whole chunks too early and the errors propagate to later chunks. Temporal difference cannot tell camera-induced changes from distortions.</figcaption>
+
+    <h3 class="subsection-title">Verification tolerance</h3>
+    <p class="lead">One test-time tolerance &epsilon; trades speed against quality without retraining. With &epsilon; between 0.20 and 0.24 the sampler keeps the quality of four-step sampling and reaches the lowest Drift.</p>
+    <div class="two">
+      <div class="chart-card">
+        <h3 class="chart-title">Quality score, higher is better</h3>
+        <div class="chart" id="chart-eps-q"></div>
+      </div>
+      <div class="chart-card">
+        <h3 class="chart-title">Drift, lower is better</h3>
+        <div class="chart" id="chart-eps-d"></div>
+      </div>
+    </div>
+
+  </div>
+</section>
+
+<!-- ======================= Tables ======================= -->
+<section id="tables" class="section">
+  <div class="container">
+    <div class="eyebrow">Numbers</div>
+    <h2 class="section-title">Quantitative results</h2>
+    <p class="lead">Mean steps is the measured average number of denoising passes per token. Throughput is measured on a single NVIDIA H100. Bold marks the best value in each column.</p>
+    <div class="tabs" id="q-tabs" role="tablist" aria-label="Benchmarks">
+      <button type="button" class="tab" role="tab" aria-controls="q-short" aria-selected="true">Short video</button>
+      <button type="button" class="tab" role="tab" aria-controls="q-long" aria-selected="false">Long video</button>
+      <button type="button" class="tab" role="tab" aria-controls="q-world" aria-selected="false">World generation</button>
+    </div>
+    <div class="q-panel" id="q-short" role="tabpanel"><div class="table-scroll" id="table-short"></div>
+      <p class="caption">5-second videos with LongLive, standard 16-dimension VBench protocol. Both verifiers keep the four-step total with fewer than 1.7 steps per token.</p></div>
+    <div class="q-panel" id="q-long" role="tabpanel" hidden><div class="table-scroll" id="table-long"></div>
+      <p class="caption">30-second videos with LongLive, evaluated with VBench-Long. Drift measures the variation of imaging quality across the rollout, lower is better.</p></div>
+    <div class="q-panel" id="q-world" role="tabpanel" hidden><div class="table-scroll" id="table-world"></div>
+      <p class="caption">World generation with Lingbot-World 2.0 on 200 held-out navigation scenes. RPE is the relative pose error of the camera trajectory. Quality aggregates the six VBench dimensions.</p></div>
+    <h3 class="subsection-title">Routing strategy</h3>
+    <div class="table-scroll" id="table-routing"></div>
+    <p class="caption">Lingbot-World 2.0, every method calibrated at &epsilon; = 0.24 to a similar mean number of steps. Channel variance and temporal difference are selection signals adapted from prior work. Chunk-wise acceptance uses our learned verifier but commits whole chunks. The oracle runs every step to measure the true gap and reports no throughput.</p>
+  </div>
+</section>
+
+<!-- ======================= Abstract ======================= -->
+<section id="abstract" class="section">
+  <div class="container">
+    <div class="eyebrow">Paper</div>
+    <h2 class="section-title">Abstract</h2>
+    <p class="abstract">Few-step autoregressive video generators enable streaming generation, yet they run every token through the final denoising step, regardless of how much refinement it needs. We find this uniform computation is often unnecessary: many tokens already closely match their eventual full-step outputs in the initial steps, while others require refinement until the end. We introduce Speculative Forcing, a framework that treats intermediate clean estimates as drafts and predicts when individual tokens can be safely accepted early. Once accepted, a token is frozen as its final output and undergoes no further denoising, while its cached keys and values remain available as context for the remaining tokens. We explore two alternative verifier designs: a training-free one based on similarity to clean content and stability across steps, and a learned one that reads the frozen generator&rsquo;s intermediate features to estimate each token&rsquo;s remaining gap to its full-step output. Across short-video, long-video, and world generation, Speculative Forcing preserves the quality of full-step sampling while substantially reducing computation. On LongLive, it matches the four-step generator with &sim;1.7 denoising steps per token, running over 1.5&times; faster at 41.7 and 37.8 fps. On Lingbot-World 2.0, where camera motion continually changes the visible content, it maintains quality with &sim;2.5 denoising steps per token and runs 1.35&times; faster at 24.5 fps.</p>
+  </div>
+</section>
+
+<!-- ======================= Citation ======================= -->
+<section id="citation" class="section">
+  <div class="container">
+    <div class="eyebrow">Cite</div>
+    <h2 class="section-title">Citation</h2>
+    <div class="cite">
+      <button class="copy-btn" id="copy-bib" type="button">Copy</button>
+<pre id="bibtex">@article{choi2026speculative,
+  title   = {Speculative Forcing for Efficient Autoregressive Video Generation},
+  author  = {Choi, Hyunwook and Kim, Seungryong and Han, Dongyoon and Yun, Sangdoo},
+  journal = {arXiv preprint},
+  year    = {2026}
+}</pre>
+    </div>
+  </div>
+</section>
+
+<footer class="footer">Speculative Forcing. KAIST AI and NAVER AI Lab.</footer>
+
+<script src="main.js"></script>
 </body>
-
 </html>
