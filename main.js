@@ -231,13 +231,13 @@
     var rg = el("linearGradient", { id: "mark-no", x1: "0", y1: "0", x2: "1", y2: "1" }, defs);
     el("stop", { offset: "0", "stop-color": "#f06b6f" }, rg); el("stop", { offset: "1", "stop-color": "#dd3f45" }, rg);
     el("rect", { x: 1, y: 1, width: 70, height: 70, rx: 18, fill: "url(#mark-bg)", stroke: "#d9e4dd", "stroke-width": 1.5 }, svg);
-    var cells = [], T = 17, G = 4.5, O = (72 - 3 * T - 2 * G) / 2;
+    var cells = [], T = 15, G = 4, k = T / 17, O = (72 - 3 * T - 2 * G) / 2;
     for (var r = 0; r < 3; r++) for (var c = 0; c < 3; c++) {
       var x = O + c * (T + G), yy = O + r * (T + G), g = el("g", { "class": "cell" }, svg);
       var rect = el("rect", { x: x, y: yy, width: T, height: T, rx: 5, fill: "#fff", stroke: "#c9d3cd", "stroke-width": 1.6 }, g);
-      var q = el("text", { x: x + T / 2, y: yy + T / 2 + 4.3, "text-anchor": "middle", "font-size": 12, "font-weight": 700, fill: "#a4adb0", "font-family": "Inter, Arial, sans-serif" }, g, "?");
-      var ok = el("path", { d: "M" + (x + 4.3) + " " + (yy + 9) + "l3.2 3.2 5.4-6.4", fill: "none", stroke: "#fff", "stroke-width": 2.6, "stroke-linecap": "round", "stroke-linejoin": "round", "class": "sym" }, g);
-      var no = el("path", { d: "M" + (x + 5.4) + " " + (yy + 5.4) + "l6.2 6.2M" + (x + 11.6) + " " + (yy + 5.4) + "l-6.2 6.2", fill: "none", stroke: "#fff", "stroke-width": 2.6, "stroke-linecap": "round", "class": "sym" }, g);
+      var q = el("text", { x: x + T / 2, y: yy + T / 2 + 4.3 * k, "text-anchor": "middle", "font-size": 12 * k, "font-weight": 700, fill: "#a4adb0", "font-family": "Inter, Arial, sans-serif" }, g, "?");
+      var ok = el("path", { d: "M" + (x + 4.3 * k) + " " + (yy + 9 * k) + "l" + 3.2 * k + " " + 3.2 * k + " " + 5.4 * k + " " + -6.4 * k, fill: "none", stroke: "#fff", "stroke-width": 2.6, "stroke-linecap": "round", "stroke-linejoin": "round", "class": "sym" }, g);
+      var no = el("path", { d: "M" + (x + 5.4 * k) + " " + (yy + 5.4 * k) + "l" + 6.2 * k + " " + 6.2 * k + "M" + (x + 11.6 * k) + " " + (yy + 5.4 * k) + "l" + -6.2 * k + " " + 6.2 * k, fill: "none", stroke: "#fff", "stroke-width": 2.6, "stroke-linecap": "round", "class": "sym" }, g);
       ok.style.opacity = 0; no.style.opacity = 0;
       cells.push({ rect: rect, q: q, ok: ok, no: no });
     }
