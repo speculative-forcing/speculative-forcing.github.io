@@ -310,6 +310,7 @@
     }
     [A, B].forEach(function (v) {
       v.addEventListener("ended", function () { if (v === live && want) advance(); });
+      v.addEventListener("error", function () { if (v === live && want) advance(); });
       v.addEventListener("timeupdate", function () { if (v === live) fill.style.width = (v.duration ? v.currentTime / v.duration * 100 : 0) + "%"; });
       v.addEventListener("click", function () { if (v !== live) return; if (v.paused) { want = true; play(v); } else { want = false; v.pause(); } });
     });
@@ -319,16 +320,17 @@
       b.addEventListener("click", function () { want = true; show(i, true); });
     });
     show(0, false);
-    players.push({ v: A, w: B, start: function () { if (want) play(live); }, stop: function () { live.pause(); } });
+    // watch the gallery box, not a video: the hidden player would read as off-screen and pause the live one
+    players.push({ el: host, start: function () { if (want) play(live); }, stop: function () { live.pause(); } });
   }
   gallery("short", "1\u00d7", "LongLive, 5-second video from the VBench prompt set");
   gallery("long", "3\u00d7", "");
   gallery("world", "1.5\u00d7", "");
   if ("IntersectionObserver" in window) {
     var io = new IntersectionObserver(function (es) {
-      es.forEach(function (e) { var p = players.filter(function (q) { return q.v === e.target || q.w === e.target; })[0]; if (!p) return; if (e.isIntersecting) p.start(); else p.stop(); });
+      es.forEach(function (e) { var p = players.filter(function (q) { return q.el === e.target; })[0]; if (!p) return; if (e.isIntersecting) p.start(); else p.stop(); });
     }, { threshold: 0.3 });
-    players.forEach(function (p) { io.observe(p.v); });
+    players.forEach(function (p) { io.observe(p.el); });
   } else { players.forEach(function (p) { p.start(); }); }
 
   /* ------------------------------------------------------------------ table tabs */
