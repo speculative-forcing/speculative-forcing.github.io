@@ -268,6 +268,10 @@
   /* ------------------------------------------------------------------ qualitative galleries: one full-width player per section, samples play one after another */
   var KEY = { W: "W", A: "A", S: "S", D: "D", left: "\u2190", right: "\u2192", stop: "stop" };
   var players = [];
+  // Safari (Low Power Mode, or a play() refused before data arrived) can leave muted autoplay videos paused.
+  // Each entry restarts its video when it should be playing; they run on load progress and on the first taps.
+  var kicks = [];
+  function kickAll() { kicks.forEach(function (k) { k(); }); }
   function esc(t) { return t.replace(/&/g, "&amp;").replace(/</g, "&lt;"); }
   function gallery(sec, speed, note) {
     var host = $("gallery-" + sec), list = SAMPLES[sec]; if (!host || !list || !list.length) return;
@@ -287,7 +291,7 @@
     var bar = h("div", "stage-bar", host); var fill = h("i", "", bar);
     var cap = h("div", "tile-cap stage-cap", host);
     var strip = h("div", "strip", host); strip.setAttribute("role", "tablist"); strip.setAttribute("aria-label", "Samples");
-    var cur = -1, want = true, live = A, back = B;
+    var cur = -1, want = true, vis = !("IntersectionObserver" in window), live = A, back = B;
     function describe(i) {
       var s = list[i];
       var keys = s.actions ? "<span class=\"keys\" aria-label=\"Camera actions\">" + s.actions.map(function (a) { return "<kbd>" + (KEY[a] || a) + "</kbd>"; }).join("") + "</span>" : "";
@@ -320,6 +324,7 @@
     [A, B].forEach(function (v) {
       v.addEventListener("ended", function () { if (v === live && want) advance(); });
       v.addEventListener("error", function () { if (v === live && want) advance(); });
+      v.addEventListener("canplay", function () { if (v === live && want && vis && v.paused) play(v); });
       v.addEventListener("timeupdate", function () { if (v === live) fill.style.width = (v.duration ? v.currentTime / v.duration * 100 : 0) + "%"; });
       v.addEventListener("click", function () { if (v !== live) return; if (v.paused) { want = true; play(v); } else { want = false; v.pause(); } });
     });
@@ -333,7 +338,8 @@
     });
     show(0, false);
     // watch the gallery box, not a video: the hidden player would read as off-screen and pause the live one
-    players.push({ el: host, start: function () { if (want) play(live); }, stop: function () { live.pause(); } });
+    players.push({ el: host, start: function () { vis = true; if (want) play(live); }, stop: function () { vis = false; live.pause(); } });
+    kicks.push(function () { if (want && vis && live.paused) play(live); });
   }
   gallery("short", "1\u00d7", "LongLive, 5-second video from the VBench prompt set");
   gallery("long", "3\u00d7", "");
@@ -344,6 +350,14 @@
     }, { threshold: 0.3 });
     players.forEach(function (p) { io.observe(p.el); });
   } else { players.forEach(function (p) { p.start(); }); }
+
+  // method animation: keep it playing unless the viewer paused it after it had started
+  (function () {
+    var m = $("method-video"); if (!m) return; var started = false;
+    m.addEventListener("playing", function () { started = true; });
+    function go() { if (!started && m.paused) { var p = m.play(); if (p && p.catch) p.catch(function () {}); } }
+    m.addEventListener("canplay", go); kicks.push(go); go();
+  })();
 
   /* ------------------------------------------------------------------ table tabs */
   (function () {
@@ -361,7 +375,12 @@
     if (!v) return;
     var PAUSE = "<rect x=\"6\" y=\"5\" width=\"4\" height=\"14\" rx=\"1\"/><rect x=\"14\" y=\"5\" width=\"4\" height=\"14\" rx=\"1\"/>", PLAY = "<path d=\"M8 5v14l11-7z\"/>";
     function sync() { ico.innerHTML = v.paused ? PLAY : PAUSE; btn.setAttribute("aria-label", v.paused ? "Play" : "Pause"); }
-    function toggle() { if (v.paused) { var p = v.play(); if (p && p.catch) p.catch(function () {}); } else v.pause(); }
+    var userPaused = false;
+    function start() { var p = v.play(); if (p && p.catch) p.catch(function () {}); }
+    function toggle() { if (v.paused) { userPaused = false; start(); } else { userPaused = true; v.pause(); } }
+    v.addEventListener("canplay", function () { if (!userPaused && v.paused) start(); });
+    kicks.push(function () { if (!userPaused && v.paused) start(); });
+    start();
     function fmt(t) { t = Math.max(0, Math.floor(t || 0)); return Math.floor(t / 60) + ":" + ("0" + (t % 60)).slice(-2); }
     v.addEventListener("play", sync); v.addEventListener("pause", sync);
     v.addEventListener("click", toggle); btn.addEventListener("click", toggle);
@@ -395,6 +414,10 @@
     }
     window.addEventListener("scroll", mark, { passive: true }); window.addEventListener("resize", mark); mark();
   })();
+
+  // a tap or key press lets Safari start media that autoplay was not allowed to; runs after the element's own handlers
+  ["touchend", "click", "keydown"].forEach(function (t) { window.addEventListener(t, kickAll, { passive: true }); });
+  document.addEventListener("visibilitychange", function () { if (!document.hidden) kickAll(); });
 
   /* ------------------------------------------------------------------ copy the BibTeX entry */
   (function () {
