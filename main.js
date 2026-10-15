@@ -296,17 +296,26 @@
         (s.prompt ? "<span class=\"prompt\" title=\"" + esc(s.full || s.prompt) + "\">\u201c" + esc(s.prompt) + "\u201d" + keys + "</span>" : (note ? "<span class=\"prompt\">" + note + "</span>" : ""));
       Array.prototype.forEach.call(strip.children, function (b, j) { b.classList.toggle("active", j === i); b.setAttribute("aria-selected", j === i ? "true" : "false"); });
     }
-    function load(v, i) { var s = list[i]; v.poster = "static/videos/" + s.id + ".jpg"; v.src = "static/videos/" + s.id + ".mp4"; v.load();
+    function load(v, i) { if (v.idx === i) return; v.idx = i; var s = list[i]; v.poster = "static/videos/" + s.id + ".jpg"; v.src = "static/videos/" + s.id + ".mp4"; v.load();
       v.setAttribute("aria-label", "4-step sampling, Speculative Forcing and the accepted step per token" + (s.prompt ? ". " + s.prompt : "")); }
     function play(v) { var p = v.play(); if (p && p.catch) p.catch(function () {}); }
     function warm() { load(back, (cur + 1) % list.length); }
     function show(i, autoplay) {           // jump to sample i in the live player
       cur = (i + list.length) % list.length; load(live, cur); describe(cur); if (autoplay) play(live); warm();
     }
-    function advance() {                   // flip to the preloaded player
-      var i = (cur + 1) % list.length; cur = i;
-      back.hidden = false; live.hidden = true; var t = live; live = back; back = t;
+    function flip() {                      // swap the preloaded player in
+      back.hidden = false; live.hidden = true; live.pause(); var t = live; live = back; back = t;
       describe(cur); play(live); warm();
+    }
+    function advance() { cur = (cur + 1) % list.length; load(back, cur); flip(); }   // a hovered thumbnail may have taken the back player
+    function jump(i) {                     // a clicked thumbnail: reuse the preloaded clip when it is the one
+      if (i === cur) { live.currentTime = 0; play(live); return; }
+      cur = i; load(back, i); back.currentTime = 0;
+      if (back.readyState >= 3) { flip(); return; }
+      describe(cur);
+      var go = function () { back.removeEventListener("canplay", go); if (back.idx === cur) flip(); };
+      back.addEventListener("canplay", go);
+      play(back);
     }
     [A, B].forEach(function (v) {
       v.addEventListener("ended", function () { if (v === live && want) advance(); });
@@ -317,7 +326,10 @@
     list.forEach(function (s, i) {
       var b = h("button", "thumb", strip, "<img src=\"static/videos/" + s.id + "_t.jpg\" alt=\"\" width=\"320\" height=\"180\"><span>" + s.steps.toFixed(2) + " steps</span>");
       b.type = "button"; b.setAttribute("role", "tab"); b.setAttribute("aria-label", "Sample " + (i + 1) + ", " + s.steps.toFixed(2) + " steps per token");
-      b.addEventListener("click", function () { want = true; show(i, true); });
+      b.addEventListener("click", function () { want = true; jump(i); });
+      // start fetching as soon as the pointer or focus reaches a thumbnail
+      function pre() { if (i !== cur && back.idx !== i) load(back, i); }
+      b.addEventListener("pointerenter", pre); b.addEventListener("focus", pre);
     });
     show(0, false);
     // watch the gallery box, not a video: the hidden player would read as off-screen and pause the live one
